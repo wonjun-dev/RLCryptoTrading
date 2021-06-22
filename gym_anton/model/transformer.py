@@ -7,9 +7,9 @@ class TransformerQnet(nn.Module):
     def __init__(self):
         super(TransformerQnet, self).__init__()
         # Transformer encoder
-        self.transformer_layer = nn.TransformerEncoderLayer(d_model=4, nhead=2, batch_first=True)
+        self.transformer_layer = nn.TransformerEncoderLayer(d_model=6, nhead=2, batch_first=True)
         self.encoder = nn.TransformerEncoder(self.transformer_layer, num_layers=2)
-        self.linear_layer = nn.Linear(8, 3)
+        self.linear_layer = nn.Linear(144, 4)
 
     def forward(self, x):
         x = self.encoder(x)
@@ -28,6 +28,6 @@ class TransformerQnet(nn.Module):
 
 if __name__ == "__main__":
     model = TransformerQnet()
-    src = torch.rand(5, 2, 4) # (batch, seq, dim)
-    out = model(src)
-    print(out)
+    src = torch.rand(32, 24, 6) # (batch, seq, dim)
+    out = model.forward(src)
+    print(out, out.shape)

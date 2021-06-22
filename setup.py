@@ -1,3 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
-setup(name="gym-anton", version="0.0.1", install_requires=["gym"])
+setup(name="gym_anton", version="0.0.1", packages=find_packages() ,install_requires=["gym"])
+

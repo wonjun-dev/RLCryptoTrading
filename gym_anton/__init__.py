@@ -3,5 +3,5 @@ from copy import deepcopy
 
 from . import datasets
 
-register(id='spot-v0', entry_point="gym_anthon.envs:TradingEnv", kwargs={})
+register(id='spot-v0', entry_point="gym_anton.envs:TradingEnv", kwargs={})
 register(id="future-v0", entry_point="gym_anton.envs:FutureEnv", kwargs={})
