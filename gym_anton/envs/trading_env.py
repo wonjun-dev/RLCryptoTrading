@@ -39,10 +39,11 @@ class TradingEnv(gym.Env):
 
         # Define episode
         self._start_tick = self.window_size
-        self._end_tick = len(self.prices) - 1
+        self._end_tick = self._start_tick + self.window_size
         self._done = None
         self._current_tick = None
         self._last_trade_tick = None
+        self._action = None
         self._action_history = None
         self._total_reward = None
         self._total_profit = None
@@ -54,14 +55,23 @@ class TradingEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
 
     def step(self, action):
-        ...
+        self._done = False
+        self._current_tick += 1
+
+        if self._current_tick == self._end_tick:
+            self._done = True
+        
+        step_reward = self._calculate_reward(action)
+        self._total_reward += step_reward
+
+
         return observation, reward, done, info
 
     def reset(self):
         self._done = False
         self._current_tick = self._start_tick
         self._last_trade_tick = self._current_tick - 1
-        self._action_history = (self.window_size * [None]) + [self._position]
+        self._action_history = (self.window_size * [None]) + [self._action]
         self._total_reward = 0.
         self._total_profit = 1.  # unit
         self._first_rendering = True
@@ -94,3 +104,7 @@ class TradingEnv(gym.Env):
     
     def _get_observation(self):
         return self.signal_features[(self._current_tick-self.window_size):self._current_tick]
+
+    def _calculate_reward(self):
+        return None
+

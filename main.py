@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 import torch
 import torch.optim as optim
 
@@ -10,8 +11,8 @@ from gym_anton.utils import dqn_trainer
 
 def main():
     env = gym.make('spot-v0', df=df, window_size=window_size)
-    q = TransformerQnet()
-    q_target = TransformerQnet()
+    q = TransformerQnet(d_model=6, nhead=2, num_layers=2, num_seq=window_size)
+    q_target = TransformerQnet(d_model=6, nhead=2, num_layers=2, num_seq=window_size)
     q_target.load_state_dict(q.state_dict())
     memory = ReplayBuffer(buffer_limit=buffer_limit)
 
@@ -21,7 +22,9 @@ def main():
     for n_epi in range(1000):
         epsilon = max(0.01, 0.08 - 0.01*(n_epi/200))
         s = env.reset()
+        s = np.expand_dims(s, axis=0)
         done = False
+        print(env._end_tick)
 
         while not done:
             a = q.sample_action(torch.from_numpy(s).float(), epsilon)

@@ -4,12 +4,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class TransformerQnet(nn.Module):
-    def __init__(self):
+    def __init__(self, d_model, nhead, num_layers, num_seq):
         super(TransformerQnet, self).__init__()
         # Transformer encoder
-        self.transformer_layer = nn.TransformerEncoderLayer(d_model=6, nhead=2, batch_first=True)
-        self.encoder = nn.TransformerEncoder(self.transformer_layer, num_layers=2)
-        self.linear_layer = nn.Linear(144, 4)
+        self.transformer_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
+        self.encoder = nn.TransformerEncoder(self.transformer_layer, num_layers=num_layers)
+        self.linear_layer = nn.Linear(d_model * num_seq, 4)
 
     def forward(self, x):
         x = self.encoder(x)
