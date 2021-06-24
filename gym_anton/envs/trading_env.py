@@ -5,7 +5,8 @@ from gym import spaces
 from gym.utils import seeding
 import numpy as np
 
-from ..utils import indicator_manager as im 
+from ..utils import indicator_manager as im
+from ..utils import preprocess_manager as pm 
 
 
 class Actions(Enum):
@@ -13,6 +14,11 @@ class Actions(Enum):
     LONG = 1
     WATCH = 2
     EXIT = 3
+
+class Position(Enum):
+    SHORT = 0
+    LONG = 1
+    NO_POSITION = 2
 
 
 class TradingEnv(gym.Env):
@@ -38,6 +44,7 @@ class TradingEnv(gym.Env):
         )
 
         # Define episode
+        self._value = None
         self._start_tick = self.window_size
         self._end_tick = self._start_tick + self.window_size
         self._done = None
@@ -45,6 +52,8 @@ class TradingEnv(gym.Env):
         self._last_trade_tick = None
         self._action = None
         self._action_history = None
+        self._position = Position.NO_POSITION
+        self._position_history = None
         self._total_reward = None
         self._total_profit = None
         self.history = None
@@ -64,6 +73,16 @@ class TradingEnv(gym.Env):
         step_reward = self._calculate_reward(action)
         self._total_reward += step_reward
 
+        # self._update_profit(action)
+
+        if action == 0: # Short
+            self._action_short()
+        elif action == 1:   # Long
+            self._action_long()
+        elif action == 2:   # Watch
+            self._action_watch()
+        elif action == 3:   # Exit
+            self._action_exit()
 
         return observation, reward, done, info
 
@@ -76,35 +95,58 @@ class TradingEnv(gym.Env):
         self._total_profit = 1.  # unit
         self._first_rendering = True
         self.history = {}
-        return self._get_observation()  # reward, done, info can't be included
+        return self._get_observation(reset=True)  # reward, done, info can't be included
 
-    def render(self, mode="human"):
-        ...
-
-    def close(self):
-        ...
-
+   
     def _process_data(self):
-        prices = self.df.loc[:, 'close'].to_numpy()
+        open_price = self.df.loc[:, 'open'].to_numpy()
+        close_price = self.df.loc[:, 'close'].to_numpy()
+        high_price = self.df.loc[:, 'high'].to_numpy()
+        low_price = self.df.loc[:, 'low'].to_numpy()
+        # diff = np.insert(np.diff(open_price), 0, 0)
+        
+        # indicator feature
+        close_open = pm.normalize_open_price(close_price, open_price)
+        high_open = pm.normalize_open_price(high_price, open_price)
+        low_open = pm.normalize_open_price(low_price, open_price) 
+    
+        bu, bm, bl = im.bollingerBands(close_price)
+        bu_high = pm.normalize_open_price(bu, high_price)
+        bm_open = pm.normalize_open_price(bm, open_price)
+        bl_low = pm.normalize_open_price(bl, low_price)
 
-        # preprocess
-        # TODO: neatly
-        diff = np.insert(np.diff(prices), 0, 0)
-        bollinger = im.bollingerBands(prices)
-        rsi = im.rsi(prices)
 
-        signal_features = np.column_stack((prices, diff))
-        signal_features = np.column_stack((signal_features, bollinger[0]))
-        signal_features = np.column_stack((signal_features, bollinger[1]))
-        signal_features = np.column_stack((signal_features, bollinger[2]))
-        signal_features = np.column_stack((signal_features, rsi))
+        signal_features = np.column_stack((close_open, high_open))
+        signal_features = np.column_stack((signal_features, low_open))
+        signal_features = np.column_stack((signal_features, bu_high))
+        signal_features = np.column_stack((signal_features, bm_open))
+        signal_features = np.column_stack((signal_features, bl_low))
         signal_features = np.nan_to_num(signal_features)
 
-        return prices, signal_features
+        return open_price, signal_features
     
-    def _get_observation(self):
-        return self.signal_features[(self._current_tick-self.window_size):self._current_tick]
+    def _action_short(self):
+        pass
+
+    def _action_long(self):
+        pass
+
+    def _action_watch(self):
+        pass
+
+    def _action_exit(self):
+        pass
+    
+    def _get_observation(self, reset=False):
+        if reset:
+            position = self._position
+            signal_feature = self.signal_features[(self._current_tick-self.window_size):self._current_tick]
+            signal_feature = np.column_stack((signal_feature, position))
+        else:
+            return self.signal_features[(self._current_tick-self.window_size):self._current_tick]
 
     def _calculate_reward(self):
         return None
 
+    def _update_profit(self):
+        return None

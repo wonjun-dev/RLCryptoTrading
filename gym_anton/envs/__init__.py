@@ -1,1 +1,1 @@
-from .trading_env import TradingEnv, Actions
+from .trading_env import TradingEnv, Actions, Position
