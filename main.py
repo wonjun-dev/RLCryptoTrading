@@ -11,8 +11,8 @@ from gym_anton.utils import dqn_trainer
 
 def main():
     env = gym.make('spot-v0', df=df, window_size=window_size)
-    q = TransformerQnet(d_model=7, nhead=1, num_layers=2, num_seq=window_size)
-    q_target = TransformerQnet(d_model=7, nhead=1, num_layers=2, num_seq=window_size)
+    q = TransformerQnet(d_model=8, nhead=2, num_layers=2, num_seq=window_size)
+    q_target = TransformerQnet(d_model=8, nhead=2, num_layers=2, num_seq=window_size)
     q_target.load_state_dict(q.state_dict())
     memory = ReplayBuffer(buffer_limit=buffer_limit)
 
@@ -20,16 +20,15 @@ def main():
     score = 0.0
 
     for n_epi in range(1000):
+        print("--new episode--")
         epsilon = max(0.01, 0.08 - 0.01*(n_epi/200))
         s = env.reset()
-        s = np.expand_dims(s, axis=0)
-        print(env._position.name == "NO_POSITION")
         done = False
 
         while not done:
+            s = np.expand_dims(s, axis=0)
             a = q.sample_action(torch.from_numpy(s).float(), epsilon)
-            print('action', a)
-            s_prime, r, done, info = env.step(a)
+            s_prime, r, done = env.step(a)
             done_mask = 0.0 if done else 1.0
             memory.put((s,a,r/100.0,s_prime,done_mask))
             s = s_prime
