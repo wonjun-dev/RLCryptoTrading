@@ -58,8 +58,9 @@ class TradingEnv(gym.Env):
         self._position = Position.NO_POSITION
         self._position_history = [self._position]
         self._action_history = []
-
         self._reward_history = []
+
+        self._terminate = False
 
 
     def seed(self, seed=None):
@@ -91,34 +92,43 @@ class TradingEnv(gym.Env):
         if self._profit <= 0.985:
             self._done = True
             self._last_episode_tick = self._current_tick
+        
+        if self._current_tick >= self.frame_bound[-1]:
+            self._done = True
+            self._last_episode_tick = self._current_tick
+            self._terminate = True
+
 
         # profit update
-        self._update_profit()        
+        if not self._done:
+            self._update_profit()        
 
         # calculate reward
-        reward = self._calculate_reward(self._done)
+        # self._print_stats()
+        reward = self._calculate_reward(done=self._done)
         self._reward_history.append(reward)
-        self._print_stats()
+        
 
         # get new observation
         self._current_tick += 1
         observation = self._get_observation()
 
-        return observation, reward, self._done
+        return observation, reward, self._done, self._terminate
 
     def reset(self):
         self._start_tick = self._last_episode_tick + 1
         self._end_tick = self._start_tick + self.window_size
         self._current_tick = self._start_tick
         self._last_trade_tick = None
-        self._done = False
+        self._done = None
 
         self._profit = 1.
         self._profit_history = [self._profit]
         self._position = Position.NO_POSITION
         self._position_history = [self._position]
-
+        self._action_history = []
         self._reward_history = []
+
         return self._get_observation(reset=True)  # reward, done, info can't be included
 
    
@@ -168,31 +178,30 @@ class TradingEnv(gym.Env):
 
     
     def _get_observation(self, reset=False):
-        print('tick: ', self._current_tick)
         signal_feature = self.signal_features[(self._current_tick-self.window_size):self._current_tick]
+
         if reset:
             position = np.ones(signal_feature.shape[0]) * self._position_history[-1].value
             profit = np.ones(signal_feature.shape[0]) * self._profit_history[-1]
-            add_feature = np.column_stack((signal_feature, position))
-            add_feature = np.column_stack((add_feature, profit))
-            self.observation_features = add_feature
-            print("shape1: ", self.observation_features.shape)
+            observation = np.column_stack((signal_feature, position))
+            observation = np.column_stack((observation, profit))
+            self.observation_features = observation
         else:
-            print(self.observation_features.shape)
-            last_feature = self.observation_features[(self._current_tick-self.window_size):]
-            print("shape2: ", last_feature.shape)
+            last_observation = self.observation_features[1:]
             new_observation = np.expand_dims(signal_feature[-1], axis=0)
             
             position = np.ones(new_observation.shape[0]) * self._position_history[-1].value
             profit = np.ones(new_observation.shape[0]) * self._profit_history[-1]
-            add_feature = np.column_stack((new_observation, position))
-            add_feature = np.column_stack((add_feature, profit))
-            self.observation_features = np.vstack((last_feature, add_feature))
-            print("shape3: ", self.observation_features.shape)
+            new_observation = np.column_stack((new_observation, position))
+            new_observation = np.column_stack((new_observation, profit))
+            self.observation_features = np.vstack((last_observation, new_observation))
         return self.observation_features
 
     def _calculate_reward(self, done):
-        step_reward = (self._profit_history[-1] - self._profit_history[-2]) * 100
+        if len(self._profit_history) >= 2:
+            step_reward = (self._profit_history[-1] - self._profit_history[-2]) * 100
+        else:
+            step_reward = 0.
 
         if done:
             episode_reward = (self._profit_history[-1] - self._profit_history[0]) * 100
@@ -220,7 +229,9 @@ class TradingEnv(gym.Env):
 
 
     def _print_stats(self):
-        print(self._action_history)
-        print(self._position_history)
-        print(self._profit_history)
-        print(self._reward_history)
+        print("Start tick: ", self._current_tick - self.window_size)
+        print("End tick: ", self._current_tick - 1)
+        print("Action hist: ", self._action_history)
+        print("Position hist: ", self._position_history)
+        print("Profit hist: ", self._profit_history)
+        print("Reward hist: ", self._reward_history)

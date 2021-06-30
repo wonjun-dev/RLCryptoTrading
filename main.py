@@ -19,16 +19,18 @@ def main():
     optimzer = optim.Adam(q.parameters(), lr=learning_rate)
     score = 0.0
 
-    for n_epi in range(1000):
-        print("--new episode--")
+    terminate = False
+    n_epi = -1
+    while not terminate:
+        n_epi += 1
+        print(f"Episode: {n_epi}")
         epsilon = max(0.01, 0.08 - 0.01*(n_epi/200))
         s = env.reset()
         done = False
 
         while not done:
-            s = np.expand_dims(s, axis=0)
-            a = q.sample_action(torch.from_numpy(s).float(), epsilon)
-            s_prime, r, done = env.step(a)
+            a = q.sample_action(torch.from_numpy(np.expand_dims(s, axis=0)).float(), epsilon)
+            s_prime, r, done, terminate = env.step(a)
             done_mask = 0.0 if done else 1.0
             memory.put((s,a,r/100.0,s_prime,done_mask))
             s = s_prime
@@ -37,7 +39,7 @@ def main():
             if done:
                 break
 
-        if memory.size()>2000:
+        if memory.size()>5000:
             dqn_trainer(q, q_target, memory, optimzer, gamma, batch_size=batch_size)
         
         if n_epi%print_interval==0 and n_epi!=0:
@@ -46,22 +48,18 @@ def main():
             score = 0.0
     
     env.close()
-        
-
-
-    
 
 
 if __name__ == "__main__":
     # Hyperparameters
     learning_rate = 0.0005
     gamma = 0.98
-    buffer_limit = 1000
+    buffer_limit = 30000
     batch_size = 32
-    print_interval = 20
+    print_interval = 100
     window_size = 24
 
 
     # load dataset
-    df = gym_anton.datasets.TEST_BTCUSDT_5M.copy()
+    df = gym_anton.datasets.BTCUSDT_10M.copy()
     main()
