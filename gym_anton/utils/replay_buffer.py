@@ -4,13 +4,13 @@ import random
 import torch
 
 
-class ReplayBuffer():
+class ReplayBuffer:
     def __init__(self, buffer_limit):
         self.buffer = collections.deque(maxlen=buffer_limit)
-    
+
     def put(self, transition):
         self.buffer.append(transition)
-    
+
     def sample(self, n):
         mini_batch = random.sample(self.buffer, n)
         s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
@@ -23,15 +23,22 @@ class ReplayBuffer():
             s_prime_lst.append(s_prime)
             done_mask_lst.append([done_mask])
 
-        return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst), torch.tensor(r_lst), torch.tensor(s_prime_lst, dtype=torch.float), torch.tensor(done_mask_lst)
+        return (
+            torch.tensor(s_lst, dtype=torch.float, device="cuda"),
+            torch.tensor(a_lst, device="cuda"),
+            torch.tensor(r_lst, device="cuda"),
+            torch.tensor(s_prime_lst, dtype=torch.float, device="cuda"),
+            torch.tensor(done_mask_lst, device="cuda"),
+        )
 
     def size(self):
         return len(self.buffer)
 
+
 if __name__ == "__main__":
     memory = ReplayBuffer(10)
     s, a, r, s_prime, done_mask = 1, 0, 10, 2, 0
-    memory.put((s,a,r,s_prime,done_mask))
+    memory.put((s, a, r, s_prime, done_mask))
     print(memory.size())
     transition = memory.sample(1)
     print(transition)

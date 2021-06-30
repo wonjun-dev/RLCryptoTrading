@@ -10,10 +10,14 @@ from gym_anton.utils import dqn_trainer
 
 
 def main():
-    env = gym.make('spot-v0', df=df, window_size=window_size)
+    env = gym.make("spot-v0", df=df, window_size=window_size)
     q = TransformerQnet(d_model=8, nhead=2, num_layers=2, num_seq=window_size)
     q_target = TransformerQnet(d_model=8, nhead=2, num_layers=2, num_seq=window_size)
     q_target.load_state_dict(q.state_dict())
+
+    q.to(device)
+    q_target.to(device)
+
     memory = ReplayBuffer(buffer_limit=buffer_limit)
 
     optimzer = optim.Adam(q.parameters(), lr=learning_rate)
@@ -24,29 +28,33 @@ def main():
     while not terminate:
         n_epi += 1
         print(f"Episode: {n_epi}")
-        epsilon = max(0.01, 0.08 - 0.01*(n_epi/200))
+        epsilon = max(0.01, 0.08 - 0.01 * (n_epi / 200))
         s = env.reset()
         done = False
 
         while not done:
-            a = q.sample_action(torch.from_numpy(np.expand_dims(s, axis=0)).float(), epsilon)
+            a = q.sample_action(
+                torch.from_numpy(np.expand_dims(s, axis=0)).float().to(device), epsilon
+            )
             s_prime, r, done, terminate = env.step(a)
             done_mask = 0.0 if done else 1.0
-            memory.put((s,a,r/100.0,s_prime,done_mask))
+            memory.put((s, a, r / 100.0, s_prime, done_mask))
             s = s_prime
             score += r
 
             if done:
                 break
 
-        if memory.size()>5000:
+        if memory.size() > 5000:
             dqn_trainer(q, q_target, memory, optimzer, gamma, batch_size=batch_size)
-        
-        if n_epi%print_interval==0 and n_epi!=0:
+
+        if n_epi % print_interval == 0 and n_epi != 0:
             q_target.load_state_dict(q.state_dict())
-            print(f"n_episode :{n_epi}, score :{score/print_interval}, n_buffer :{memory.size()}, eps :{epsilon*100}")
+            print(
+                f"n_episode :{n_epi}, score :{score/print_interval}, n_buffer :{memory.size()}, eps :{epsilon*100}"
+            )
             score = 0.0
-    
+
     env.close()
 
 
@@ -58,8 +66,9 @@ if __name__ == "__main__":
     batch_size = 32
     print_interval = 100
     window_size = 24
-
+    device = torch.device("cuda")
 
     # load dataset
     df = gym_anton.datasets.BTCUSDT_10M.copy()
+
     main()
