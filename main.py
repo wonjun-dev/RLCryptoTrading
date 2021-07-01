@@ -27,8 +27,7 @@ def main():
     n_epi = -1
     while not terminate:
         n_epi += 1
-        print(f"Episode: {n_epi}")
-        epsilon = max(0.01, 0.08 - 0.01 * (n_epi / 200))
+        epsilon = max(0.01, 0.08 - 0.01 * (n_epi / 2000))
         s = env.reset()
         done = False
 
@@ -38,7 +37,7 @@ def main():
             )
             s_prime, r, done, terminate = env.step(a)
             done_mask = 0.0 if done else 1.0
-            memory.put((s, a, r / 100.0, s_prime, done_mask))
+            memory.put((s, a, r, s_prime, done_mask))
             s = s_prime
             score += r
 
@@ -53,6 +52,7 @@ def main():
             print(
                 f"n_episode :{n_epi}, score :{score/print_interval}, n_buffer :{memory.size()}, eps :{epsilon*100}"
             )
+            print(f"Stats: {env._print_stats()}")
             score = 0.0
 
     env.close()
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # Hyperparameters
     learning_rate = 0.0005
     gamma = 0.98
-    buffer_limit = 30000
+    buffer_limit = 10000
     batch_size = 32
     print_interval = 100
     window_size = 24

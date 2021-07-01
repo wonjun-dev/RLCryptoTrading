@@ -53,6 +53,7 @@ class TradingEnv(gym.Env):
         self._last_episode_tick = self._start_tick - 1  # 23
         self._last_trade_tick = None  # current_tick - 1
         self._done = None
+        self._invalid_action = None
 
         self._profit = 1.0
         self._profit_history = [self._profit]
@@ -81,6 +82,15 @@ class TradingEnv(gym.Env):
             self._action_exit()
 
         # Episode end condition
+        if action == Actions.SHORT.value or action == Actions.LONG.value:
+            self._done = (
+                Actions.SHORT.value in self._action_history[:-1]
+                or Actions.LONG.value in self._action_history[:-1]
+            )
+            if self._done:
+                self._invalid_action = True
+                self._last_episode_tick = self._current_tick
+
         if self._current_tick + 1 == self._end_tick:
             self._done = True
             self._last_episode_tick = self._current_tick
@@ -119,6 +129,7 @@ class TradingEnv(gym.Env):
         self._current_tick = self._start_tick
         self._last_trade_tick = None
         self._done = None
+        self._invalid_action = None
 
         self._profit = 1.0
         self._profit_history = [self._profit]
@@ -152,7 +163,7 @@ class TradingEnv(gym.Env):
         signal_features = np.column_stack((signal_features, bl_low))
         signal_features = np.nan_to_num(signal_features)
 
-        return open_price, signal_features
+        return close_price, signal_features
 
     def _action_short(self):
         self._position = Position.SHORT
@@ -195,33 +206,40 @@ class TradingEnv(gym.Env):
         return self.observation_features
 
     def _calculate_reward(self, done):
+
+        if self._invalid_action:
+            step_reward = -1
+            return step_reward
+
         if len(self._profit_history) >= 2:
-            step_reward = (self._profit_history[-1] - self._profit_history[-2]) * 100
+            step_reward = (self._profit_history[-1] - self._profit_history[-2]) * 100  # 수익 n%
         else:
-            step_reward = 0.0
+            step_reward = 0.0  # 시작하자마자 exit
 
         if done:
-            episode_reward = (self._profit_history[-1] - self._profit_history[0]) * 100
+            episode_reward = (self._profit_history[-1] - self._profit_history[0]) * 100  # 수익 n%
             return step_reward + episode_reward
 
         return step_reward
 
     def _update_profit(self):
         if self._position_history[-1].name == "NO_POSITION":
-            profit = self._profit_history[-1]
-            self._profit_history.append(profit)
+            self._profit = self._profit_history[-1]
+            self._profit_history.append(self._profit)
 
         else:  # long or short
             current_price = self.prices[self._current_tick]
             enter_price = self.prices[self._last_trade_tick]
-            price_ratio = current_price / enter_price
+
+            net_worth = (1 - self.fee) * current_price - (1 + self.fee) * enter_price
+            net_worth_ratio = (enter_price + net_worth) / enter_price
 
             if self._position_history[-1].name == "SHORT":
-                profit = 2 - price_ratio
+                self._profit = 2 - net_worth_ratio
             if self._position_history[-1].name == "LONG":
-                profit = price_ratio
+                self._profit = net_worth_ratio
 
-            self._profit_history.append(profit)
+            self._profit_history.append(self._profit)
 
     def _print_stats(self):
         print("Start tick: ", self._current_tick - self.window_size)
