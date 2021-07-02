@@ -5,8 +5,9 @@ import torch
 
 
 class ReplayBuffer:
-    def __init__(self, buffer_limit):
+    def __init__(self, buffer_limit, device):
         self.buffer = collections.deque(maxlen=buffer_limit)
+        self.device = device
 
     def put(self, transition):
         self.buffer.append(transition)
@@ -24,11 +25,11 @@ class ReplayBuffer:
             done_mask_lst.append([done_mask])
 
         return (
-            torch.tensor(s_lst, dtype=torch.float, device="cuda"),
-            torch.tensor(a_lst, device="cuda"),
-            torch.tensor(r_lst, device="cuda"),
-            torch.tensor(s_prime_lst, dtype=torch.float, device="cuda"),
-            torch.tensor(done_mask_lst, device="cuda"),
+            torch.tensor(s_lst, dtype=torch.float, device=self.device),
+            torch.tensor(a_lst, device=self.device),
+            torch.tensor(r_lst, device=self.device),
+            torch.tensor(s_prime_lst, dtype=torch.float, device=self.device),
+            torch.tensor(done_mask_lst, device=self.device),
         )
 
     def size(self):

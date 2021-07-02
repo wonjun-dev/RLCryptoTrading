@@ -18,7 +18,7 @@ def main():
     q.to(device)
     q_target.to(device)
 
-    memory = ReplayBuffer(buffer_limit=buffer_limit)
+    memory = ReplayBuffer(buffer_limit=buffer_limit, device=device)
 
     optimzer = optim.Adam(q.parameters(), lr=learning_rate)
     score = 0.0
@@ -62,11 +62,15 @@ if __name__ == "__main__":
     # Hyperparameters
     learning_rate = 0.0005
     gamma = 0.98
-    buffer_limit = 10000
+    buffer_limit = 20000
     batch_size = 32
     print_interval = 100
     window_size = 24
-    device = torch.device("cuda")
+    if torch.cuda.is_available():
+        print("CUDA is available")
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
 
     # load dataset
     df = gym_anton.datasets.BTCUSDT_10M.copy()
