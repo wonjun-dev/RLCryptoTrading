@@ -189,7 +189,9 @@ class TradingEnv(gym.Env):
         ]
 
         if reset:
-            position = np.ones(signal_feature.shape[0]) * self._position_history[-1].value
+            position = (
+                np.ones(signal_feature.shape[0]) * self._position_history[-1].value
+            )
             profit = np.ones(signal_feature.shape[0]) * self._profit_history[-1]
             observation = np.column_stack((signal_feature, position))
             observation = np.column_stack((observation, profit))
@@ -198,7 +200,9 @@ class TradingEnv(gym.Env):
             last_observation = self.observation_features[1:]
             new_observation = np.expand_dims(signal_feature[-1], axis=0)
 
-            position = np.ones(new_observation.shape[0]) * self._position_history[-1].value
+            position = (
+                np.ones(new_observation.shape[0]) * self._position_history[-1].value
+            )
             profit = np.ones(new_observation.shape[0]) * self._profit_history[-1]
             new_observation = np.column_stack((new_observation, position))
             new_observation = np.column_stack((new_observation, profit))
@@ -211,13 +215,17 @@ class TradingEnv(gym.Env):
             step_reward = -1
             return step_reward
 
-        if len(self._profit_history) >= 2:
-            step_reward = (self._profit_history[-1] - self._profit_history[-2]) * 100  # 수익 n%
+        if len(self._profit_history) >= 2 and not done:
+            step_reward = (
+                self._profit_history[-1] - self._profit_history[-2]
+            ) * 100  # 수익 n%
         else:
             step_reward = 0.0  # 시작하자마자 exit
 
         if done:
-            episode_reward = (self._profit_history[-1] - self._profit_history[0]) * 100  # 수익 n%
+            episode_reward = (
+                self._profit_history[-1] - self._profit_history[0]
+            ) * 100  # 수익 n%
             return step_reward + episode_reward
 
         return step_reward
