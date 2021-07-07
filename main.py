@@ -7,6 +7,7 @@ import gym_anton
 from gym_anton.model import TransformerQnet
 from gym_anton.utils import ReplayBuffer
 from gym_anton.utils import dqn_trainer
+from gym_anton.utils import TensorboardManager
 
 
 def main():
@@ -45,7 +46,11 @@ def main():
                 break
 
         if memory.size() > 5000:
-            dqn_trainer(q, q_target, memory, optimzer, gamma, batch_size=batch_size)
+            info = {"Avg Loss": None, "Cumulative Reward": score}
+            avg_loss = dqn_trainer(q, q_target, memory, optimzer, gamma, batch_size=batch_size)
+            info["Avg Loss"] = avg_loss
+            print(info)
+            tb_manager.add(n_epi, info)
 
         if n_epi % print_interval == 0 and n_epi != 0:
             q_target.load_state_dict(q.state_dict())
@@ -74,5 +79,8 @@ if __name__ == "__main__":
 
     # load dataset
     df = gym_anton.datasets.BTCUSDT_10M.copy()
+
+    # Tensorboard
+    tb_manager = TensorboardManager()
 
     main()
