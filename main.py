@@ -45,6 +45,10 @@ def main():
             # score += r
 
             if done:
+                epi_info = env.get_episode_info()
+                print(epi_info)
+                st_manager.add_stats(epi_info)
+
                 break
 
         if memory.size() > 5000:
@@ -78,7 +82,8 @@ if __name__ == "__main__":
     # load dataset
     df = gym_anton.datasets.BTCUSDT_10M.copy()
 
-    # Tensorboard
+    # Manager
     tb_manager = TensorboardManager()
+    st_manager = StatsManager()
 
     main()

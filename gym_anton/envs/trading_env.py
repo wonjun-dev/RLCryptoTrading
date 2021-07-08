@@ -62,6 +62,8 @@ class TradingEnv(gym.Env):
         self._action_history = []
         self._reward_history = []
         self._participate = False
+        self._timeout = False
+        self._liquidate = False
 
         self._terminate = False
 
@@ -83,6 +85,7 @@ class TradingEnv(gym.Env):
             self._action_exit()
 
         # Episode end condition
+        # 1. invalid action
         if action != Actions.WATCH.value:
             if action == Actions.EXIT.value:
                 self._invalid_action = not self._participate
@@ -95,23 +98,31 @@ class TradingEnv(gym.Env):
                 self._done = True
                 self._last_episode_tick = self._current_tick
             else:
-                if action == Actions.EXIT.value:
+                if action == Actions.EXIT.value and not self._participate:
                     self._participate = False
                 else:
                     self._participate = True
 
+        # 2. timeout
         if self._current_tick + 1 == self._end_tick:
             self._done = True
             self._last_episode_tick = self._current_tick
 
+            if self._participate and action != Actions.EXIT.value:
+                self._timeout = True
+
+        # 3. exit action
         if action == Actions.EXIT.value:
             self._done = True
             self._last_episode_tick = self._current_tick
 
+        # 4. liqudating
         if self._profit <= 0.985:
             self._done = True
+            self._liquidate = True
             self._last_episode_tick = self._current_tick
 
+        # 5. consume all history
         if self._current_tick >= self.frame_bound[-1]:
             self._done = True
             self._last_episode_tick = self._current_tick
@@ -147,8 +158,23 @@ class TradingEnv(gym.Env):
         self._action_history = []
         self._reward_history = []
         self._participate = False
+        self._timeout = False
+        self._liquidate = False
 
         return self._get_observation(reset=True)  # reward, done, info can't be included
+
+    def get_episode_info(self):
+        info = {
+            "profit_hist": self._profit_history,
+            "reward_hist": self._reward_history,
+            "action_hist": self._action_history,
+            "invalid_action": self._invalid_action,
+            "participate": self._participate,
+            "liquidate": self._liquidate,
+            "timeout": self._timeout,
+        }
+
+        return info
 
     def _process_data(self):
         open_price = self.df.loc[:, "open"].to_numpy()
