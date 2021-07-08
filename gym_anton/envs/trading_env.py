@@ -83,13 +83,17 @@ class TradingEnv(gym.Env):
             self._action_exit()
 
         # Episode end condition
-        if action == Actions.SHORT.value or action == Actions.LONG.value:
-            self._done = (
-                Actions.SHORT.value in self._action_history[:-1]
-                or Actions.LONG.value in self._action_history[:-1]
-            )
-            if self._done:
-                self._invalid_action = True
+        if action != Actions.WATCH.value:
+
+            if action == Actions.EXIT.value:
+                self._invalid_action = not self._participate
+            else:
+                self._invalid_action = self._participate and (
+                    action == Actions.SHORT.value or action == Actions.LONG.value
+                )
+
+            if self._invalid_action:
+                self._done = True
                 self._last_episode_tick = self._current_tick
 
         if self._current_tick + 1 == self._end_tick:
