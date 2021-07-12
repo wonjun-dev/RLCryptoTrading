@@ -42,13 +42,10 @@ def main():
             done_mask = 0.0 if done else 1.0
             memory.put((s, a, r, s_prime, done_mask))
             s = s_prime
-            # score += r
 
             if done:
                 epi_info = env.get_episode_info()
-                print(epi_info)
                 st_manager.add_stats(epi_info)
-
                 break
 
         if memory.size() > 5000:
@@ -57,8 +54,11 @@ def main():
             # info = {"Avg Loss": avg_loss, "Cumulative Reward": score}
             # tb_manager.add(n_epi, info)
 
-        if n_epi % print_interval == 0 and n_epi != 0:
+        if n_epi % target_update_interval == 0 and n_epi != 0:
             q_target.load_state_dict(q.state_dict())  # update target network
+
+        if n_epi % log_interval == 0 and n_epi != 0:
+            st_manager.reset()
 
         n_epi += 1
 
@@ -71,7 +71,8 @@ if __name__ == "__main__":
     gamma = 0.98
     buffer_limit = 20000
     batch_size = 32
-    print_interval = 100
+    log_interval = 100
+    target_update_interval = 200
     window_size = 24
     if torch.cuda.is_available():
         print("CUDA is available")
