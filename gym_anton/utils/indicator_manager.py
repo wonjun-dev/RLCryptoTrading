@@ -29,3 +29,8 @@ def plus_di(high_prices, low_prices, close_prices, timeperiod=14):
 def minus_di(high_prices, low_prices, close_prices, timeperiod=14):
     real = ta.MINUS_DI(high_prices, low_prices, close_prices, timeperiod)
     return real
+
+
+def ma(close_prices, timeperiod=30, matype=0):
+    real = ta.MA(close_prices, timeperiod, matype)
+    return real

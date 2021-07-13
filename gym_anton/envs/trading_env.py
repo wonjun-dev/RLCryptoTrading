@@ -1,5 +1,6 @@
 from enum import Enum
 from mmap import ACCESS_COPY
+from os import close
 
 import gym
 from gym import spaces
@@ -53,7 +54,7 @@ class TradingEnv(gym.Env):
         self._last_episode_tick = self._start_tick - 1  # 23
         self._last_trade_tick = None  # current_tick - 1
         self._done = None
-        self._invalid_action = None
+        self._invalid_action = False
 
         self._profit = 1.0
         self._profit_history = [self._profit]
@@ -149,7 +150,7 @@ class TradingEnv(gym.Env):
         self._current_tick = self._start_tick
         self._last_trade_tick = None
         self._done = None
-        self._invalid_action = None
+        self._invalid_action = False
 
         self._profit = 1.0
         self._profit_history = [self._profit]
@@ -192,11 +193,25 @@ class TradingEnv(gym.Env):
         bm_open = pm.normalize_open_price(bm, open_price)
         bl_low = pm.normalize_open_price(bl, low_price)
 
+        ma = im.ma(close_price)
+        ma_close = pm.normalize_open_price(ma, close_price)
+
+        rsi = im.rsi(close_price)
+        adx = im.adx(high_price, low_price, close_price)
+        plus_di = im.plus_di(high_price, low_price, close_price)
+        minus_di = im.minus_di(high_price, low_price, close_price)
+
         signal_features = np.column_stack((close_open, high_open))
         signal_features = np.column_stack((signal_features, low_open))
         signal_features = np.column_stack((signal_features, bu_high))
         signal_features = np.column_stack((signal_features, bm_open))
         signal_features = np.column_stack((signal_features, bl_low))
+        signal_features = np.column_stack((signal_features, ma_close))
+        signal_features = np.column_stack((signal_features, rsi))
+        signal_features = np.column_stack((signal_features, adx))
+        signal_features = np.column_stack((signal_features, plus_di))
+        signal_features = np.column_stack((signal_features, minus_di))
+
         signal_features = np.nan_to_num(signal_features)
 
         return close_price, signal_features
@@ -227,8 +242,14 @@ class TradingEnv(gym.Env):
         if reset:
             position = np.ones(signal_feature.shape[0]) * self._position_history[-1].value
             profit = np.ones(signal_feature.shape[0]) * self._profit_history[-1]
+            timestamp = (
+                np.ones(signal_feature.shape[0])
+                * (self._current_tick - self._start_tick)
+                / self.window_size
+            )
             observation = np.column_stack((signal_feature, position))
             observation = np.column_stack((observation, profit))
+            observation = np.column_stack((observation, timestamp))
             self.observation_features = observation
         else:
             last_observation = self.observation_features[1:]
@@ -236,15 +257,21 @@ class TradingEnv(gym.Env):
 
             position = np.ones(new_observation.shape[0]) * self._position_history[-1].value
             profit = np.ones(new_observation.shape[0]) * self._profit_history[-1]
+            timestamp = (
+                np.ones(new_observation.shape[0])
+                * (self._current_tick - self._start_tick)
+                / self.window_size
+            )
             new_observation = np.column_stack((new_observation, position))
             new_observation = np.column_stack((new_observation, profit))
+            new_observation = np.column_stack((new_observation, timestamp))
             self.observation_features = np.vstack((last_observation, new_observation))
         return self.observation_features
 
     def _calculate_reward(self, done):
 
         if self._invalid_action:
-            step_reward = -1
+            step_reward = -0.2
             return step_reward
 
         if len(self._profit_history) >= 2 and not done:

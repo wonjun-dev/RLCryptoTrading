@@ -3,4 +3,5 @@ gym
 ta-lib
 numpy
 pandas
+tensorboard
 

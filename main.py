@@ -13,8 +13,8 @@ from gym_anton.utils import StatsManager
 
 def main():
     env = gym.make("spot-v0", df=df, window_size=window_size)
-    q = TransformerQnet(d_model=8, nhead=2, num_layers=2, num_seq=window_size)
-    q_target = TransformerQnet(d_model=8, nhead=2, num_layers=2, num_seq=window_size)
+    q = TransformerQnet(d_model=14, nhead=2, num_layers=2, num_seq=window_size)
+    q_target = TransformerQnet(d_model=14, nhead=2, num_layers=2, num_seq=window_size)
     q_target.load_state_dict(q.state_dict())
 
     q.to(device)
@@ -30,7 +30,7 @@ def main():
 
     # main loop
     while not terminate:
-        epsilon = max(0.01, 0.08 - 0.01 * (n_epi / 2000))
+        epsilon = max(0.01, 0.05 - 0.01 * (n_epi / 2000))
         s = env.reset()
         done = False
 
@@ -50,14 +50,16 @@ def main():
 
         if memory.size() > 5000:
             avg_loss = dqn_trainer(q, q_target, memory, optimzer, gamma, batch_size=batch_size)
-
-            # info = {"Avg Loss": avg_loss, "Cumulative Reward": score}
-            # tb_manager.add(n_epi, info)
+            info = {"Avg Loss": avg_loss}
+            tb_manager.add(n_epi, info)
 
         if n_epi % target_update_interval == 0 and n_epi != 0:
             q_target.load_state_dict(q.state_dict())  # update target network
 
         if n_epi % log_interval == 0 and n_epi != 0:
+            st_manager.get_log_stats()
+            tb_manager.add(n_epi, st_manager.log_stats_dict)
+            print(st_manager.log_stats_dict)
             st_manager.reset()
 
         n_epi += 1
@@ -68,7 +70,7 @@ def main():
 if __name__ == "__main__":
     # Hyperparameters
     learning_rate = 0.0005
-    gamma = 0.98
+    gamma = 1.0
     buffer_limit = 20000
     batch_size = 32
     log_interval = 100
