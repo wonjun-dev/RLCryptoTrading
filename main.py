@@ -74,7 +74,7 @@ if __name__ == "__main__":
     buffer_limit = 20000
     batch_size = 32
     log_interval = 100
-    target_update_interval = 200
+    target_update_interval = 100
     window_size = 24
     if torch.cuda.is_available():
         print("CUDA is available")
